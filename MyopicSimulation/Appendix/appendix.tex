@@ -1,0 +1,37 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb, amsmath, amsthm, amsfonts, cancel, hyperref, tikz}
+\usepackage[margin=0.75in]{geometry}
+\newcommand{\brac}[1]{\left\{ #1\right\}}
+\newcommand{\un}[1]{\underline{#1}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\begin{document}
+\title{Appendix}
+\date{}
+\author{}
+\maketitle
+\begin{definition}[Buyers/Sellers]
+    Each buyer, $B_i$, has a true cost for the item they are buying, $c_i$, and a bid $b_i$ such 
+    that $b_i\ge c_i$. Each seller, $S_j$, has a true price for the item they are selling, $p_j$, and an ask $a_j$ such that $a_j\le p_j$.
+\end{definition}
+\begin{definition}[Clearing Price]
+    Consider some bid $b$ and ask $a$. The clearing price, $cp(b,a)$, a function of the bid and ask that maps to the price at which the transaction clears.
+    We require that $cp(b,a)\in [a,b]$.
+\end{definition}
+\begin{definition}[Surplus]
+    Let $B_i$ denote a buyer with cost $c_i$ and bid $b_i$. Let $S_j$ denote a seller with price $p_j$ and ask $a_j$.
+    Consider some clearing price $cp(b_i,a_j)$. The surplus for the buyer is defined as $s_{B_i}=c_i-cp(b_i,a_j)$ 
+    and the surplus for the seller is defined as $s_{S_j}=p_j-cp(b_i,a_j)$. The total surplus of the transaction, 
+    defined $s_{B_i,S_j}=s_{B_i}+s_{S_j}$, is the sum of the surplus for the buyer and the seller. The surplus of any buyer or 
+    seller not involved in a transaction is $0$.
+\end{definition}
+\begin{theorem}[Surplus Calculation]
+    The calculation of surplus in the market does not depend on the clearing price.
+\end{theorem}
+\begin{proof}
+    We define the surplus of the market as the summation of the surplus for each transaction.
+    Note that for each transaction with buyer and seller $B_i,S_j$, the surplus is defined as $s_{B_i,S_j}=c_i-p_j$
+    and thus does not depend on the clearing price.
+\end{proof}
+\end{document}
