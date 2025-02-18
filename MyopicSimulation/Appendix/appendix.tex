@@ -14,6 +14,10 @@
 \begin{definition}[Buyers/Sellers]
     Each buyer, $B_i$, has a true cost for the item they are buying, $c_i$, and a bid $b_i$ such 
     that $b_i\ge c_i$. Each seller, $S_j$, has a true price for the item they are selling, $p_j$, and an ask $a_j$ such that $a_j\le p_j$.
+    Buyers and sellers also have a UUID unique with respect to their type. For example, if there are 5 buyers and 5 sellers, 
+    the buyers will have UUIDs $0,1,2,3,4$ and the sellers will have UUIDs $0,1,2,3,4$.
+    In the program we represent the buyer $B_i$ as a list $[u_i,c_i,b_i]$ such that $B_i[0]=u_i$ is the UUID of the buyer, $B_i[1]=c_i$ is the true cost of the buyer, and $B_i[2]=b_i$ is the bid of the buyer.
+    We represent the seller $S_j$ as a list $[v_j,p_j,a_j]$ such that $S_j[0]=v_j$ is the UUID of the seller, $S_j[1]=p_j$ is the true price of the seller, and $S_j[2]=a_j$ is the ask of the seller.
 \end{definition}
 \begin{definition}[Clearing Price]
     Consider some bid $b$ and ask $a$. The clearing price, $cp(b,a)$, a function of the bid and ask that maps to the price at which the transaction clears.
