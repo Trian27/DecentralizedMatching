@@ -31,10 +31,17 @@ def calculate_market_surplus(buyers: list, sellers: list) -> Tuple[int, int]:
     by matching the highest bid with the lowest ask, the second highest bid with the second lowest ask, etc,
     until there are no more possible trades. We also record the number of trades that take place.
     Notably, the surplus calculation does not depend on the clearing price (see appendix for proof).'''
-    random.shuffle(buyers)
-    random.shuffle(sellers)
-    buyers.sort(key=lambda x: x[2], reverse=True)
-    sellers.sort(key=lambda x: x[2], reverse=True)
+
+    # This will be the true shuffling and sorting algorithm before matching
+    # random.shuffle(buyers)
+    # random.shuffle(sellers)
+    # buyers.sort(key=lambda x: (x[2]), reverse=True)
+    # sellers.sort(key=lambda x: (x[2]), reverse=True)
+
+    # This is the sorting algorithm that we will use for the simulation to ensure reproducibility
+    buyers.sort(key=lambda x: (x[2],x[1]), reverse=True)
+    sellers.sort(key=lambda x: (x[2],x[1]), reverse=True)
+
     buyers_length = len(buyers)
     sellers_length = len(sellers)
     surplus = 0
@@ -218,15 +225,16 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
     return counter < iteration_threshold 
 
 
-def five_buy_and_sell() -> Tuple[int, int, int, int, list, list]:
+def five_buy_and_sell() -> Tuple[int, int, list, list, list[list], list[list], int]:
     '''Creates a market with 5 buyers and 5 sellers. The true costs are randomly generated between 0 and 15.
     The true prices are randomly generated from 5 to 20. The bids and asks are initially the same as the true costs and prices (before initial deviation).
     Each buyer is an array of type [uuid, true_cost, bid]. Each seller is an array of type [index, true_price, ask].
     We then calculate the market surplus and number of trades before any deviation. We then deviate the bids and asks randomly (initial deviation).
-    Then we recalculate the market surplus and number of trades since this can be drastically different.
-    We then run the myopic_unilateral_deviation function 1000 times. Each time we deep copy the buyers and sellers array.
-    This is so that we have 1000 iterations where we start with random agents (testing to see if order matters).
-    We record the surplus and number of trades after each deviation in an array (including how many times we did not reach equilibrium).'''
+    We deviate the bids and asks randomly 10 times (deep copy the lists beforehand). Each time we deviate we do the following:
+        We recalculate the market surplus and number of trades since this can be drastically different.
+        We then run the myopic_unilateral_deviation function 10 times. Each time we deep copy the buyers and sellers array.
+        This is so that we have 10 iterations where we start with random agents (testing to see if order matters).
+        We record the surplus and number of trades after each deviation in an array (including how many times we did not reach equilibrium).'''
     buyers = [[i, value := random.randint(0, 15), value] for i in range(5)]
     sellers = [[i, value := random.randint(5, 20), value] for i in range(5)]
 
@@ -234,45 +242,58 @@ def five_buy_and_sell() -> Tuple[int, int, int, int, list, list]:
 
     times_no_equilibrium = 0
 
-    initial_deviation(buyers, sellers, 0, 20)   
+    surplus_after_rand = [] # each element represents surplus after an initial deviation
+    trades_after_rand = [] # each element represents number of trades after an initial deviation
 
-    surplus_after_rand, trades_after_rand = calculate_market_surplus(buyers, sellers)
-    
-    if DEBUG_PRINT:
-        print(surplus_b4_dev, trades_b4_dev)
-        print(buyers, sellers)
-        print(surplus_after_rand, trades_after_rand)
-        pdb.set_trace()
+    surplus_post_dev = [] # each element is list (see surplus_post_dev_iteration)
+    trades_post_dev = [] # each element is list (see trades_post_dev_iteration)
 
-    surplus_post_dev = []
-    trades_post_dev = []
+    threshold_1 = 10
+    for i in range(threshold_1):
+        buyers_copy_1 = copy.deepcopy(buyers) # deep copy so we can test for multiple intial deviations
+        sellers_copy_2 = copy.deepcopy(sellers) # deep copy so we can test for multiple intial deviations
+        initial_deviation(buyers_copy_1, sellers_copy_2, 0, 20)
+        surplus_after_rand_iteration, trades_after_rand_iteration = calculate_market_surplus(buyers_copy_1, sellers_copy_2)
 
-    threshold = 1000
-    for i in range(threshold):
-        buyers_copy = copy.deepcopy(buyers)
-        sellers_copy = copy.deepcopy(sellers)
+        surplus_after_rand.append(surplus_after_rand_iteration)
+        trades_after_rand.append(trades_after_rand_iteration)
+
+        if DEBUG_PRINT:
+            print(surplus_b4_dev, trades_b4_dev)
+            print(buyers, sellers)
+            print(surplus_after_rand_iteration, trades_after_rand_iteration)
+            pdb.set_trace()
         
-        equilibrium_reached = myopic_unilateral_deviation(buyers_copy, sellers_copy)
-        if equilibrium_reached:
-            surplus_after_dev, trades_after_dev = calculate_market_surplus(buyers_copy, sellers_copy)
+        surplus_post_dev_iteration = [] # each element represents surplus for a random agent order
+        trades_post_dev_iteration = [] # each element represents number of trades for a random agent order
+        threshold_2 = 10
+        for j in range(threshold_2):
+            buyers_copy_2 = copy.deepcopy(buyers_copy_1) # deep copy so we can test for multiple random agent orders
+            sellers_copy_2 = copy.deepcopy(sellers_copy_2) # deep copy so we can test for multiple random agent orders
+            
+            equilibrium_reached = myopic_unilateral_deviation(buyers_copy_2, sellers_copy_2)
+            if equilibrium_reached:
+                surplus_after_dev, trades_after_dev = calculate_market_surplus(buyers_copy_2, sellers_copy_2)
 
-            if DEBUG_PRINT:
-                print("Iter {}: {} vs {}; {} vs {}".format(i, surplus_after_dev, surplus_b4_dev, trades_after_dev, trades_b4_dev))
-                if surplus_after_dev < surplus_b4_dev:
-                    pdb.set_trace()
+                if DEBUG_PRINT:
+                    print("Iter {}: {} vs {}; {} vs {}".format(j, surplus_after_dev, surplus_b4_dev, trades_after_dev, trades_b4_dev))
+                    if surplus_after_dev < surplus_b4_dev:
+                        pdb.set_trace()
 
-            surplus_post_dev.append(surplus_after_dev)
-            trades_post_dev.append(trades_after_dev)
-        else:
-            times_no_equilibrium += 1
-            surplus_post_dev.append(None)
-            trades_post_dev.append(None)
+                surplus_post_dev_iteration.append(surplus_after_dev)
+                trades_post_dev_iteration.append(trades_after_dev)
+            else:
+                times_no_equilibrium += 1
+                surplus_post_dev_iteration.append(None)
+                trades_post_dev_iteration.append(None)
+        surplus_post_dev.append(surplus_post_dev_iteration)
+        trades_post_dev.append(trades_post_dev_iteration)
 
     return surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium
 
 def main():
-    '''We run five_buy_and_sell 1000 times to get 1000 trials of buyer and seller arrays.
-    1000 value and cost profiles; for each profile, 1000 simulations with random agent orders.
+    '''We run five_buy_and_sell 100 times to get 100 trials of buyer and seller arrays.
+    1000 value and cost profiles; for each profile, 100 simulations with random agent orders.
     Then for each run of the simulation we calculate the average surplus_post_dev/surplus_b4_dev and average trades_post_dev/trades_b4_dev.'''
     
     # fix a seed to reproduce
@@ -289,24 +310,54 @@ def main():
         count_trades = 0
 
         after_dev_length = len(surplus_post_dev)
-        for j in range(after_dev_length):
-            if surplus_post_dev[j] is not None: # We have reached equilibrium so increment the surplus statistics.
-                count_surplus += 1
-                total_surplus += surplus_post_dev[j]
-
-            if trades_post_dev[j] is not None: # We have reached equilibrium so increment the trades statistics.
-                count_trades += 1
-                total_trades += trades_post_dev[j]
 
         logging.info(f"Iteration {i}")
+
+        for j in range(after_dev_length):
+
+            total_surplus_per_iteration = 0
+            total_trades_per_iteration = 0
+
+            count_surplus_per_iteration = 0
+            count_trades_per_iteration = 0
+
+            spj = surplus_post_dev[j]
+            tpj = trades_post_dev[j]
+            
+            spj_length = len(spj)
+            for k in range(spj_length):
+                if spj[k] is not None:
+                    total_surplus_per_iteration += spj[k]
+                    count_surplus_per_iteration += 1
+                if tpj[k] is not None:
+                    total_trades_per_iteration += tpj[k]
+                    count_trades_per_iteration += 1
+            
+            total_surplus += total_surplus_per_iteration
+            total_trades += total_trades_per_iteration
+
+            count_surplus += count_surplus_per_iteration
+            count_trades += count_trades_per_iteration
+
+            logging.info(f"Statistics for Initial Deviation {j}")
+            if count_surplus_per_iteration * surplus_b4_dev != 0:
+                logging.info(f"Average surplus_post_dev_{j}/surplus_b4_dev: {total_surplus_per_iteration/(count_surplus_per_iteration * surplus_b4_dev)}")
+            else:
+                logging.info(f"Average surplus_post_dev{j}/surplus_b4_dev: N/A")
+            if count_trades_per_iteration * trades_b4_dev != 0:
+                logging.info(f"Average trades_post_dev_{j}/trades_b4_dev: {total_trades_per_iteration/(count_trades_per_iteration * trades_b4_dev)}")
+            else:
+                logging.info(f"Average trades_post_dev_{j}/trades_b4_dev: N/A")
+        
+        logging.info(f"Overall Statistics for Iteration {i}")
         if count_surplus * surplus_b4_dev != 0:
-            logging.info(f"Average surplus_post_dev/surplus_b4_dev: {total_surplus/(count_surplus * surplus_b4_dev)}")
+            logging.info(f"Average surplus_post_dev_total/surplus_b4_dev: {total_surplus/(count_surplus * surplus_b4_dev)}")
         else:
-            logging.info("Average surplus_post_dev/surplus_b4_dev: N/A") # This can trigger if we never reach equilibrium, there are never any trades or trades result in 0 surplus, or a combo.
+            logging.info("Average surplus_post_dev_total/surplus_b4_dev: N/A")
         if count_trades * trades_b4_dev != 0:
-            logging.info(f"Average trades_post_dev/trades_b4_dev: {total_trades/(count_trades * trades_b4_dev)}")
+            logging.info(f"Average trades_post_dev_total/trades_b4_dev: {total_trades/(count_trades * trades_b4_dev)}")
         else:
-            logging.info("Average trades_post_dev/trades_b4_dev: N/A") # This can trigger if we never reach equilibrium, there are never any trades, or a combo.
+             logging.info("Average trades_post_dev_total/trades_b4_dev: N/A")
         logging.info(f"Times no equilibrium: {times_no_equilibrium}")
 
 if __name__ == "__main__":
