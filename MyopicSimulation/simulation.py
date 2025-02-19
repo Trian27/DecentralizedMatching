@@ -260,7 +260,7 @@ def five_buy_and_sell() -> Tuple[int, int, list, list, list[list], list[list], i
 
         if DEBUG_PRINT:
             print(surplus_b4_dev, trades_b4_dev)
-            print(buyers, sellers)
+            print(buyers_copy_1, sellers_copy_2)
             print(surplus_after_rand_iteration, trades_after_rand_iteration)
             pdb.set_trace()
         
@@ -277,8 +277,8 @@ def five_buy_and_sell() -> Tuple[int, int, list, list, list[list], list[list], i
 
                 if DEBUG_PRINT:
                     print("Iter {}: {} vs {}; {} vs {}".format(j, surplus_after_dev, surplus_b4_dev, trades_after_dev, trades_b4_dev))
-                    if surplus_after_dev < surplus_b4_dev:
-                        pdb.set_trace()
+                    # if surplus_after_dev < surplus_b4_dev:
+                    #     pdb.set_trace()
 
                 surplus_post_dev_iteration.append(surplus_after_dev)
                 trades_post_dev_iteration.append(trades_after_dev)
