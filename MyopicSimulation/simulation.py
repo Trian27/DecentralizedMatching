@@ -1,7 +1,10 @@
 import random, copy
 from typing import Union, Tuple
+import pdb
 import logging
 logging.basicConfig(filename='simulation.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+DEBUG_PRINT = False
 
 def clearing_price(bid: int, ask: int) -> int:
     '''Calculates the clearing price given a bid and ask. Right now is set at the midpoint.'''
@@ -100,7 +103,6 @@ def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
     '''Calculates valid bid that maximizes expected value of trade for buyer. We iterate through all possible bids.
     We know the max bid is their true cost. We also know their min bid is the lowest seller's ask (since if they bid lower they cannot transact).
     Then we calculate the expected surplus for each bid and choose the bid that maximizes expected surplus.'''
-
     buyer = []
     for curr_buyer in buyers:
         if curr_buyer[0] == buyer_uiud:
@@ -121,6 +123,10 @@ def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
             best_bid = bid
 
     buyer[2] = best_bid
+
+    if DEBUG_PRINT and best_bid != original_bid:
+        print("Buyer {} changes original bid {} to {}".format(buyer[0], original_bid, best_bid))   
+        # pdb.set_trace()
 
     return best_bid != original_bid
 
@@ -150,6 +156,10 @@ def calculate_best_ask(seller_uiud: int, buyers: list, sellers: list) -> bool:
 
     seller[2] = best_ask
 
+    if DEBUG_PRINT and best_ask != original_ask:
+        print("Seller {} changes original ask {} to {}".format(seller[0], original_ask, best_ask))   
+        # pdb.set_trace()
+
     return best_ask != original_ask
 
 def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
@@ -175,11 +185,16 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
 
     while (len(inactive_agents) < buyers_length + sellers_length) and (counter < iteration_threshold):
         curr_agent = random.randint(0, buyers_length + sellers_length - 1) # will refer to UUID of buyer, or UIUD of seller + len(buyers)
+        if DEBUG_PRINT:
+            print("cnt: {}; agt: {}".format(counter, curr_agent))
+
         if curr_agent == last_agent:
+            counter += 1
             continue
+
         last_agent = curr_agent
         if curr_agent < buyers_length:
-
+            best_bid = buyers[curr_agent][2]
             if calculate_best_bid(curr_agent, buyers, sellers):
                 inactive_agents.clear()
                 buyers.sort(key=lambda x: x[2], reverse=True)
@@ -187,6 +202,7 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
                 inactive_agents.add(curr_agent)
         else:
             seller_uiud = curr_agent - buyers_length
+            best_ask = sellers[seller_uiud][2]
             if calculate_best_ask(seller_uiud, buyers, sellers):
                 inactive_agents.clear()
                 sellers.sort(key=lambda x: x[2], reverse=True)
@@ -194,7 +210,11 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
                 inactive_agents.add(curr_agent)
 
         counter += 1
-        
+    
+    if DEBUG_PRINT:
+        print("No more unilateral deviation")
+        print(buyers)
+        print(sellers)
     return counter < iteration_threshold 
 
 
@@ -209,12 +229,20 @@ def five_buy_and_sell() -> Tuple[int, int, int, int, list, list]:
     We record the surplus and number of trades after each deviation in an array (including how many times we did not reach equilibrium).'''
     buyers = [[i, value := random.randint(0, 15), value] for i in range(5)]
     sellers = [[i, value := random.randint(5, 20), value] for i in range(5)]
+
     surplus_b4_dev, trades_b4_dev = calculate_market_surplus(buyers, sellers)
+
     times_no_equilibrium = 0
 
-    initial_deviation(buyers, sellers, 0, 20)
+    initial_deviation(buyers, sellers, 0, 20)   
 
     surplus_after_rand, trades_after_rand = calculate_market_surplus(buyers, sellers)
+    
+    if DEBUG_PRINT:
+        print(surplus_b4_dev, trades_b4_dev)
+        print(buyers, sellers)
+        print(surplus_after_rand, trades_after_rand)
+        pdb.set_trace()
 
     surplus_post_dev = []
     trades_post_dev = []
@@ -227,6 +255,12 @@ def five_buy_and_sell() -> Tuple[int, int, int, int, list, list]:
         equilibrium_reached = myopic_unilateral_deviation(buyers_copy, sellers_copy)
         if equilibrium_reached:
             surplus_after_dev, trades_after_dev = calculate_market_surplus(buyers_copy, sellers_copy)
+
+            if DEBUG_PRINT:
+                print("Iter {}: {} vs {}; {} vs {}".format(i, surplus_after_dev, surplus_b4_dev, trades_after_dev, trades_b4_dev))
+                if surplus_after_dev < surplus_b4_dev:
+                    pdb.set_trace()
+
             surplus_post_dev.append(surplus_after_dev)
             trades_post_dev.append(trades_after_dev)
         else:
@@ -238,8 +272,13 @@ def five_buy_and_sell() -> Tuple[int, int, int, int, list, list]:
 
 def main():
     '''We run five_buy_and_sell 1000 times to get 1000 trials of buyer and seller arrays.
+    1000 value and cost profiles; for each profile, 1000 simulations with random agent orders.
     Then for each run of the simulation we calculate the average surplus_post_dev/surplus_b4_dev and average trades_post_dev/trades_b4_dev.'''
-    threshold = 1000
+    
+    # fix a seed to reproduce
+    random.seed(1)
+
+    threshold = 100
     for i in range(threshold):
         surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = five_buy_and_sell()
 
