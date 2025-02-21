@@ -20,7 +20,7 @@ def initial_deviation(buyers: list, sellers: list, min_buy: int, max_sell: int) 
     sellers_length = len(sellers)
     while index < buyers_length or index < sellers_length:
         if index < buyers_length:
-            buyers[index][2] = buyers[index][1] - random.randint(min_buy, buyers[index][1])
+            buyers[index][2] = buyers[index][1] - random.randint(0, buyers[index][1]-min_buy)
         if index < sellers_length:
             sellers[index][2] = sellers[index][1] + random.randint(0, max_sell - sellers[index][1])
         index += 1
@@ -109,7 +109,8 @@ def expected_seller_surplus(true_price: int, ask: int, buyers: list, sellers: li
 def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
     '''Calculates valid bid that maximizes expected value of trade for buyer. We iterate through all possible bids.
     We know the max bid is their true cost. We also know their min bid is the lowest seller's ask (since if they bid lower they cannot transact).
-    Then we calculate the expected surplus for each bid and choose the bid that maximizes expected surplus.'''
+    Then we calculate the expected surplus for each bid and choose the bid that maximizes expected surplus.
+    If there is no bid that gives positive surplus (the agent has no incentive to deviate), we increment the bid by 1 if possible.'''
     buyer = []
     for curr_buyer in buyers:
         if curr_buyer[0] == buyer_uiud:
@@ -128,6 +129,9 @@ def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
         if expected_surplus > max_expected_surplus:
             max_expected_surplus = expected_surplus
             best_bid = bid
+        
+    if max_expected_surplus == 0 and original_bid < true_cost: # if no positive surplus position, increment bid by 1 (as long as it is less than true cost)
+            best_bid += 1
 
     buyer[2] = best_bid
 
@@ -140,7 +144,8 @@ def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
 def calculate_best_ask(seller_uiud: int, buyers: list, sellers: list) -> bool:
     '''Calculates valid bid that maximizes expected value of trade for seller. We iterate through all possible asks.
     We know the min ask is their true price. We also know their max ask is the highest bidder's bid (since if they ask higher they cannot transact).
-    Then we calculate the expected surplus for each ask and choose the ask that maximizes expected surplus.'''
+    Then we calculate the expected surplus for each ask and choose the ask that maximizes expected surplus.
+    If there is no ask that gives positive surplus (the agent has no incentive to deviate), we decrement the ask by 1 if possible.'''
 
     seller = []
     for curr_seller in sellers:
@@ -160,6 +165,9 @@ def calculate_best_ask(seller_uiud: int, buyers: list, sellers: list) -> bool:
         if expected_surplus > max_expected_surplus:
             max_expected_surplus = expected_surplus
             best_ask = ask
+
+    if max_expected_surplus == 0 and original_ask > true_price: # if no positive surplus position, decrement ask by 1 (as long as it is greater than true price)
+        best_ask -= 1
 
     seller[2] = best_ask
 
@@ -225,9 +233,9 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
     return counter < iteration_threshold 
 
 
-def five_buy_and_sell() -> Tuple[int, int, list, list, list[list], list[list], int]:
-    '''Creates a market with 5 buyers and 5 sellers. The true costs are randomly generated between 0 and 15.
-    The true prices are randomly generated from 5 to 20. The bids and asks are initially the same as the true costs and prices (before initial deviation).
+def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) -> Tuple[int, int, list, list, list[list], list[list], int]:
+    '''Creates a market with num_buyers buyers and num_sellers sellers. The true costs are randomly generated between min_bid and max_bid.
+    The true prices are randomly generated from min_sell to max_sell. The bids and asks are initially the same as the true costs and prices (before initial deviation).
     Each buyer is an array of type [uuid, true_cost, bid]. Each seller is an array of type [index, true_price, ask].
     We then calculate the market surplus and number of trades before any deviation. We then deviate the bids and asks randomly (initial deviation).
     We deviate the bids and asks randomly 10 times (deep copy the lists beforehand). Each time we deviate we do the following:
@@ -235,8 +243,8 @@ def five_buy_and_sell() -> Tuple[int, int, list, list, list[list], list[list], i
         We then run the myopic_unilateral_deviation function 10 times. Each time we deep copy the buyers and sellers array.
         This is so that we have 10 iterations where we start with random agents (testing to see if order matters).
         We record the surplus and number of trades after each deviation in an array (including how many times we did not reach equilibrium).'''
-    buyers = [[i, value := random.randint(0, 15), value] for i in range(5)]
-    sellers = [[i, value := random.randint(5, 20), value] for i in range(5)]
+    buyers = [[i, value := random.randint(min_buy, max_buy), value] for i in range(num_buyers)]
+    sellers = [[i, value := random.randint(min_sell, max_sell), value] for i in range(num_sellers)]
 
     surplus_b4_dev, trades_b4_dev = calculate_market_surplus(buyers, sellers)
 
@@ -252,7 +260,7 @@ def five_buy_and_sell() -> Tuple[int, int, list, list, list[list], list[list], i
     for i in range(threshold_1):
         buyers_copy_1 = copy.deepcopy(buyers) # deep copy so we can test for multiple intial deviations
         sellers_copy_2 = copy.deepcopy(sellers) # deep copy so we can test for multiple intial deviations
-        initial_deviation(buyers_copy_1, sellers_copy_2, 0, 20)
+        initial_deviation(buyers_copy_1, sellers_copy_2, min_buy, max_sell)
         surplus_after_rand_iteration, trades_after_rand_iteration = calculate_market_surplus(buyers_copy_1, sellers_copy_2)
 
         surplus_after_rand.append(surplus_after_rand_iteration)
@@ -292,16 +300,16 @@ def five_buy_and_sell() -> Tuple[int, int, list, list, list[list], list[list], i
     return surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium
 
 def main():
-    '''We run five_buy_and_sell 100 times to get 100 trials of buyer and seller arrays.
+    '''We run simulation (method) 100 times to get 100 trials of buyer and seller arrays.
     1000 value and cost profiles; for each profile, 100 simulations with random agent orders.
     Then for each run of the simulation we calculate the average surplus_post_dev/surplus_b4_dev and average trades_post_dev/trades_b4_dev.'''
     
     # fix a seed to reproduce
-    random.seed(1)
+    random.seed(2)
 
     threshold = 100
     for i in range(threshold):
-        surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = five_buy_and_sell()
+        surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = simulation(5, 5, 0, 20, 0, 20)
 
         total_surplus = 0
         total_trades = 0
