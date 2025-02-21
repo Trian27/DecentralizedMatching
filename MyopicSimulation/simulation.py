@@ -84,7 +84,8 @@ def expected_buyer_surplus(true_cost: int, bid: int, buyers: list, sellers: list
             count += 1
 
     if trade_at_bid:
-        bid_total_surplus += epsilon_incentive
+        return (bid_total_surplus/count) + epsilon_incentive
+        # bid_total_surplus + epsilon_incentive
 
     return (bid_total_surplus/count)
     
@@ -117,7 +118,8 @@ def expected_seller_surplus(true_price: int, ask: int, buyers: list, sellers: li
             count += 1
 
     if trade_at_ask:
-        ask_total_surplus += epsilon_incentive
+        return (ask_total_surplus/count) + epsilon_incentive
+        # ask_total_surplus + epsilon_incentive
 
     return (ask_total_surplus/count)
 
@@ -324,7 +326,7 @@ def main():
 
     threshold = 100
     for i in range(threshold):
-        surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = simulation(5, 5, 0, 15, 5, 20, 0.1)
+        surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = simulation(5, 5, 0, 15, 5, 20, 0.00001)
 
         total_surplus = 0
         total_trades = 0
