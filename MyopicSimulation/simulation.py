@@ -2,6 +2,8 @@ import random, copy
 from typing import Union, Tuple
 import pdb
 import logging
+from decimal import Decimal, getcontext # can manipulate getcontext to set precision of decimal if needed
+
 logging.basicConfig(filename='simulation.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 DEBUG_PRINT = False
@@ -54,7 +56,7 @@ def calculate_market_surplus(buyers: list, sellers: list) -> Tuple[int, int]:
     num_trades = buyer_in
     return surplus, num_trades
 
-def expected_buyer_surplus(true_cost: int, bid: int, buyers: list, sellers: list) -> float:
+def expected_buyer_surplus(true_cost: int, bid: int, buyers: list, sellers: list, epsilon_incentive: Decimal) -> float:
     '''Calculates the expected surplus of a buyer given a bid. We have a list of all buyers and sellers.
     Then we do our market clearing function, and for each bid/ask pair with the same bid as input, we calculate the surplus for the given buyer.
     We add that up. Then we divide by the amount of times their bid appears in the buyers list. This is their expected surplus at this bid. '''
@@ -67,9 +69,13 @@ def expected_buyer_surplus(true_cost: int, bid: int, buyers: list, sellers: list
     bid_total_surplus = 0
     count = 0
 
+    trade_at_bid = False # if there is a trade at this bid price
+
     while buyer_in < buyers_length and seller_in >= 0 and buyers[buyer_in][2] >= sellers[seller_in][2]:
         if (buyers[buyer_in][2] == bid):
             bid_total_surplus += true_cost - clearing_price(bid, sellers[seller_in][2]) # adding up surplus for each transaction involving this bid price.
+            trade_at_bid = True
+            
         buyer_in += 1
         seller_in -= 1
     
@@ -77,10 +83,13 @@ def expected_buyer_surplus(true_cost: int, bid: int, buyers: list, sellers: list
         if (buyers[i][2] == bid): # count how many times this bid appears in the buyers list
             count += 1
 
+    if trade_at_bid:
+        bid_total_surplus += epsilon_incentive
+
     return (bid_total_surplus/count)
     
 
-def expected_seller_surplus(true_price: int, ask: int, buyers: list, sellers: list) -> float:
+def expected_seller_surplus(true_price: int, ask: int, buyers: list, sellers: list, epsilon_incentive: Decimal) -> float:
     '''Calculates the expected surplus of a seller given an ask. We have a list of all buyers and sellers.
     Then we do our market clearing function, and for each bid/ask pair with the same ask as input, we calculate the surplus for the given seller.
     We add that up. Then we divide by the amount of times their ask appears in the sellers list. This is their expected surplus at this ask. '''
@@ -93,9 +102,12 @@ def expected_seller_surplus(true_price: int, ask: int, buyers: list, sellers: li
     ask_total_surplus = 0
     count = 0
 
+    trade_at_ask = False # if there is a trade at this ask price
+
     while buyer_in < buyers_length and seller_in >= 0 and buyers[buyer_in][2] >= sellers[seller_in][2]: # adding up surplus for each transaction involving this ask price.
         if (sellers[seller_in][2] == ask):
             ask_total_surplus += clearing_price(buyers[buyer_in][2], ask) - true_price
+            trade_at_ask = True
 
         buyer_in += 1
         seller_in -= 1
@@ -104,9 +116,12 @@ def expected_seller_surplus(true_price: int, ask: int, buyers: list, sellers: li
         if (sellers[i][2] == ask): # count how many times this ask appears in the sellers list
             count += 1
 
+    if trade_at_ask:
+        ask_total_surplus += epsilon_incentive
+
     return (ask_total_surplus/count)
 
-def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
+def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list, epsilon_incentive: Decimal) -> bool:
     '''Calculates valid bid that maximizes expected value of trade for buyer. We iterate through all possible bids.
     We know the max bid is their true cost. We also know their min bid is the lowest seller's ask (since if they bid lower they cannot transact).
     Then we calculate the expected surplus for each bid and choose the bid that maximizes expected surplus.
@@ -125,7 +140,7 @@ def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
 
     for bid in range(min_cost, true_cost+1):
         buyer[2] = bid
-        expected_surplus = expected_buyer_surplus(true_cost, bid, buyers, sellers)
+        expected_surplus = expected_buyer_surplus(true_cost, bid, buyers, sellers, epsilon_incentive)
         if expected_surplus > max_expected_surplus:
             max_expected_surplus = expected_surplus
             best_bid = bid
@@ -141,7 +156,7 @@ def calculate_best_bid(buyer_uiud: int, buyers: list, sellers: list) -> bool:
 
     return best_bid != original_bid
 
-def calculate_best_ask(seller_uiud: int, buyers: list, sellers: list) -> bool:
+def calculate_best_ask(seller_uiud: int, buyers: list, sellers: list, epsilon_incentive: Decimal) -> bool:
     '''Calculates valid bid that maximizes expected value of trade for seller. We iterate through all possible asks.
     We know the min ask is their true price. We also know their max ask is the highest bidder's bid (since if they ask higher they cannot transact).
     Then we calculate the expected surplus for each ask and choose the ask that maximizes expected surplus.
@@ -161,7 +176,7 @@ def calculate_best_ask(seller_uiud: int, buyers: list, sellers: list) -> bool:
 
     for ask in range(true_price, max_price+1):
         seller[2] = ask
-        expected_surplus = expected_seller_surplus(true_price, ask, buyers, sellers)
+        expected_surplus = expected_seller_surplus(true_price, ask, buyers, sellers, epsilon_incentive)
         if expected_surplus > max_expected_surplus:
             max_expected_surplus = expected_surplus
             best_ask = ask
@@ -177,7 +192,7 @@ def calculate_best_ask(seller_uiud: int, buyers: list, sellers: list) -> bool:
 
     return best_ask != original_ask
 
-def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
+def myopic_unilateral_deviation(buyers: list, sellers: list, epsilon_incentive: Decimal) -> bool:
     '''We are given a buyers list and sellers list. We pick randomly an agent, through UUID, to make their move. 
     If this agent is the same as the last turn, then we move on since we have already picked their optimal move.
     If the agent is a buyer, we calculate the best bid for them. If the agent is a seller, we calculate the best ask for them.
@@ -210,7 +225,7 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
         last_agent = curr_agent
         if curr_agent < buyers_length:
             best_bid = buyers[curr_agent][2]
-            if calculate_best_bid(curr_agent, buyers, sellers):
+            if calculate_best_bid(curr_agent, buyers, sellers, epsilon_incentive):
                 inactive_agents.clear()
                 buyers.sort(key=lambda x: x[2], reverse=True)
             else:
@@ -218,7 +233,7 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
         else:
             seller_uiud = curr_agent - buyers_length
             best_ask = sellers[seller_uiud][2]
-            if calculate_best_ask(seller_uiud, buyers, sellers):
+            if calculate_best_ask(seller_uiud, buyers, sellers, epsilon_incentive):
                 inactive_agents.clear()
                 sellers.sort(key=lambda x: x[2], reverse=True)
             else:
@@ -233,7 +248,7 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
     return counter < iteration_threshold 
 
 
-def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) -> Tuple[int, int, list, list, list[list], list[list], int]:
+def simulation(num_buyers: int, num_sellers: int, min_buy: int, max_buy: int, min_sell: int, max_sell: int, epsilon_incentive: Decimal) -> Tuple[int, int, list, list, list[list], list[list], int]:
     '''Creates a market with num_buyers buyers and num_sellers sellers. The true costs are randomly generated between min_bid and max_bid.
     The true prices are randomly generated from min_sell to max_sell. The bids and asks are initially the same as the true costs and prices (before initial deviation).
     Each buyer is an array of type [uuid, true_cost, bid]. Each seller is an array of type [index, true_price, ask].
@@ -279,7 +294,7 @@ def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) ->
             buyers_copy_2 = copy.deepcopy(buyers_copy_1) # deep copy so we can test for multiple random agent orders
             sellers_copy_2 = copy.deepcopy(sellers_copy_2) # deep copy so we can test for multiple random agent orders
             
-            equilibrium_reached = myopic_unilateral_deviation(buyers_copy_2, sellers_copy_2)
+            equilibrium_reached = myopic_unilateral_deviation(buyers_copy_2, sellers_copy_2, epsilon_incentive)
             if equilibrium_reached:
                 surplus_after_dev, trades_after_dev = calculate_market_surplus(buyers_copy_2, sellers_copy_2)
 
@@ -309,7 +324,7 @@ def main():
 
     threshold = 100
     for i in range(threshold):
-        surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = simulation(5, 5, 0, 20, 0, 20)
+        surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = simulation(5, 5, 0, 15, 5, 20, 0.1)
 
         total_surplus = 0
         total_trades = 0
