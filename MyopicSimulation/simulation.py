@@ -256,7 +256,7 @@ def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) ->
     surplus_post_dev = [] # each element is list (see surplus_post_dev_iteration)
     trades_post_dev = [] # each element is list (see trades_post_dev_iteration)
 
-    threshold_1 = 10
+    threshold_1 = 100
     for i in range(threshold_1):
         buyers_copy_1 = copy.deepcopy(buyers) # deep copy so we can test for multiple intial deviations
         sellers_copy_2 = copy.deepcopy(sellers) # deep copy so we can test for multiple intial deviations
@@ -274,7 +274,7 @@ def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) ->
         
         surplus_post_dev_iteration = [] # each element represents surplus for a random agent order
         trades_post_dev_iteration = [] # each element represents number of trades for a random agent order
-        threshold_2 = 10
+        threshold_2 = 100
         for j in range(threshold_2):
             buyers_copy_2 = copy.deepcopy(buyers_copy_1) # deep copy so we can test for multiple random agent orders
             sellers_copy_2 = copy.deepcopy(sellers_copy_2) # deep copy so we can test for multiple random agent orders
@@ -305,9 +305,9 @@ def main():
     Then for each run of the simulation we calculate the average surplus_post_dev/surplus_b4_dev and average trades_post_dev/trades_b4_dev.'''
     
     # fix a seed to reproduce
-    random.seed(2)
+    random.seed(3)
 
-    threshold = 100
+    threshold = 1000
     for i in range(threshold):
         surplus_b4_dev, trades_b4_dev, surplus_after_rand, trades_after_rand, surplus_post_dev, trades_post_dev, times_no_equilibrium = simulation(5, 5, 0, 20, 0, 20)
 
