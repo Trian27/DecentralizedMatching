@@ -1,19 +1,17 @@
 # Using midpoint as clearing price - if clearing price negative just set utility to zero (no transaction will occur)
-import random, copy
-import decimal as Decimal
+import random
 from typing import Union
 
 def generate_payoffs() -> list[list[int]]:
     true_cost = random.randint(0, 20)
     true_price = random.randint(0, 20)
-    epsilon = 0.000001
     payoffs = []
     for i in range(20): # this will be the bids for the buyer
         payoff_i =[]
         for j in range(20): # this will be the asks for the seller
             clearing_price = (i+j)/2
             if i >= j and clearing_price <= true_cost and clearing_price >= true_price:
-                payoff_i.append((true_cost - clearing_price + epsilon, clearing_price - true_price + epsilon))
+                payoff_i.append((true_cost - clearing_price, clearing_price - true_price))
             else:
                 payoff_i.append((0, 0))
         payoffs.append(payoff_i)
