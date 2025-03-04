@@ -233,7 +233,7 @@ def myopic_unilateral_deviation(buyers: list, sellers: list) -> bool:
     return counter < iteration_threshold 
 
 
-def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) -> Tuple[int, int, list, list, list[list], list[list], int]:
+def simulation(num_buyers: int, num_sellers: int, min_buy: int, max_buy: int, min_sell: int, max_sell: int) -> Tuple[int, int, list, list, list[list], list[list], int]:
     '''Creates a market with num_buyers buyers and num_sellers sellers. The true costs are randomly generated between min_bid and max_bid.
     The true prices are randomly generated from min_sell to max_sell. The bids and asks are initially the same as the true costs and prices (before initial deviation).
     Each buyer is an array of type [uuid, true_cost, bid]. Each seller is an array of type [index, true_price, ask].
@@ -259,16 +259,16 @@ def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) ->
     threshold_1 = 100
     for i in range(threshold_1):
         buyers_copy_1 = copy.deepcopy(buyers) # deep copy so we can test for multiple intial deviations
-        sellers_copy_2 = copy.deepcopy(sellers) # deep copy so we can test for multiple intial deviations
-        initial_deviation(buyers_copy_1, sellers_copy_2, min_buy, max_sell)
-        surplus_after_rand_iteration, trades_after_rand_iteration = calculate_market_surplus(buyers_copy_1, sellers_copy_2)
+        sellers_copy_1 = copy.deepcopy(sellers) # deep copy so we can test for multiple intial deviations
+        initial_deviation(buyers_copy_1, sellers_copy_1, min_buy, max_sell)
+        surplus_after_rand_iteration, trades_after_rand_iteration = calculate_market_surplus(buyers_copy_1, sellers_copy_1)
 
         surplus_after_rand.append(surplus_after_rand_iteration)
         trades_after_rand.append(trades_after_rand_iteration)
 
         if DEBUG_PRINT:
             print(surplus_b4_dev, trades_b4_dev)
-            print(buyers_copy_1, sellers_copy_2)
+            print(buyers_copy_1, sellers_copy_1)
             print(surplus_after_rand_iteration, trades_after_rand_iteration)
             pdb.set_trace()
         
@@ -277,7 +277,7 @@ def simulation(num_buyers, num_sellers, min_buy, max_buy, min_sell, max_sell) ->
         threshold_2 = 100
         for j in range(threshold_2):
             buyers_copy_2 = copy.deepcopy(buyers_copy_1) # deep copy so we can test for multiple random agent orders
-            sellers_copy_2 = copy.deepcopy(sellers_copy_2) # deep copy so we can test for multiple random agent orders
+            sellers_copy_2 = copy.deepcopy(sellers_copy_1) # deep copy so we can test for multiple random agent orders
             
             equilibrium_reached = myopic_unilateral_deviation(buyers_copy_2, sellers_copy_2)
             if equilibrium_reached:
@@ -305,7 +305,7 @@ def main():
     Then for each run of the simulation we calculate the average surplus_post_dev/surplus_b4_dev and average trades_post_dev/trades_b4_dev.'''
     
     # fix a seed to reproduce
-    random.seed(3)
+    random.seed(4)
 
     threshold = 1000
     for i in range(threshold):
