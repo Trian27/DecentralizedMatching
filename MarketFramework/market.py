@@ -197,9 +197,18 @@ class Market:
         self.update_market_info(replicable)
 
     def update_buyer_bid(self, buyer: Buyer, new_bid: int, replicable: bool = False) -> None:
-        buyer.set_bid(new_bid)
+        if new_bid == -1:
+            self._buyers.remove(buyer)
+        else:
+            buyer.set_bid(new_bid)
         self.update_market_info(replicable)
 
     def update_seller_ask(self, seller: Seller, new_ask: int, replicable: bool = False) -> None:
-        seller.set_ask(new_ask)
+        if new_ask == -1:
+            self._sellers.remove(seller)
+        else:
+            seller.set_ask(new_ask)
         self.update_market_info(replicable)
+
+    def __str__(self):
+        return f"Market(buyers={self.get_buyers()}, sellers={self.get_sellers()}, epsilon={self.get_public_info().get_epsilon()})"

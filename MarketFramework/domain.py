@@ -128,6 +128,9 @@ class Buyer:
     def set_bid(self, bid: int) -> None:
         self._bid = bid
 
+    def __str__(self):
+        return f"Buyer(uuid={self.get_uuid()}, value={self.get_true_value()}, bid={self.get_bid()})"
+
 class Seller:
     def __init__(self, uuid: int, true_cost: int, ask: int):
         self._uuid: int = uuid
@@ -153,3 +156,6 @@ class Seller:
 
     def set_ask(self, ask: int) -> None:
         self._ask = ask
+
+    def __str__(self):
+        return f"Seller(uuid={self.get_uuid()}, value={self.get_true_cost()}, bid={self.get_ask()})"
